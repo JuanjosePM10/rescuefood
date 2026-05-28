@@ -70,14 +70,30 @@ export default function App() {
     );
   };
 
-  const procesarReserva = (meal) => {
-    const nuevoStock = meal.stock - 1;
-    setMeals(meals.map(m => m.id === meal.id ? { ...m, stock: nuevoStock } : m));
-    const numeroTicket = Math.floor(1000 + Math.random() * 9000);
-    Alert.alert(
-      "¡Reserva Exitosa! 🎉", 
-      `Tu código de recolección es: #FS-${numeroTicket}\n\nMuestra este código en el restaurante hoy en el horario de ${meal.pickup_time}.`
-    );
+const procesarReserva = async (meal) => {
+    try {
+      // Hacemos la petición real a tu nuevo endpoint en la nube
+      const response = await fetch(`${BASE_URL}/meals/${meal.id}/reserve`, {
+        method: 'PUT',
+      });
+
+      if (response.ok) {
+        // Si el servidor confirma la resta, actualizamos la pantalla
+        const nuevoStock = meal.stock - 1;
+        setMeals(meals.map(m => m.id === meal.id ? { ...m, stock: nuevoStock } : m));
+        
+        const numeroTicket = Math.floor(1000 + Math.random() * 9000);
+        Alert.alert(
+          "¡Reserva Exitosa! 🎉", 
+          `Tu código de recolección es: #RF-${numeroTicket}\n\nMuestra este código en el restaurante hoy en el horario de ${meal.pickup_time}.`
+        );
+      } else {
+        Alert.alert("Ups", "Alguien te ganó este platillo o hubo un error.");
+        fetchMeals(); // Recarga la lista para mostrar el inventario real
+      }
+    } catch (error) {
+      Alert.alert("Error de red", "No se pudo conectar con el servidor de rescuefood.");
+    }
   };
 
   return (
@@ -89,7 +105,7 @@ export default function App() {
           <View style={styles.welcomeLogoCircle}>
             <ShoppingBag color="#FFF" size={60} />
           </View>
-          <Text style={styles.welcomeTitle}>FreshSave <Text style={styles.mxBadgeWelcome}>MX</Text></Text>
+          <Text style={styles.welcomeTitle}>Rescuefood <Text style={styles.mxBadgeWelcome}>MX</Text></Text>
           <Text style={styles.welcomeSubtitle}>Rescata comida deliciosa, ahorra dinero y ayuda al planeta.</Text>
           
           <TouchableOpacity style={styles.startButton} onPress={() => setCurrentScreen('Home')}>
@@ -103,7 +119,7 @@ export default function App() {
       {currentScreen !== 'Welcome' && (
         <>
           <View style={styles.header}>
-            <Text style={styles.brandText}>FreshSave <Text style={styles.mxBadge}>MX</Text></Text>
+            <Text style={styles.brandText}>Rescuefood <Text style={styles.mxBadge}>MX</Text></Text>
             <TouchableOpacity style={styles.iconButton}>
               <Bell color="#10B981" size={24} />
             </TouchableOpacity>
@@ -206,7 +222,7 @@ export default function App() {
                     <User color="#FFF" size={40} />
                   </View>
                   <Text style={styles.profileName}>Juan José</Text>
-                  <Text style={styles.profileBio}>Ingeniero & Rescatista de Comida</Text>
+                  <Text style={styles.profileBio}>El inge</Text>
                   <View style={styles.levelBadge}>
                     <Award color="#F59E0B" size={16} />
                     <Text style={styles.levelText}>Nivel 3: Héroe Local</Text>

@@ -44,7 +44,7 @@ def get_available_meals(db: Session = Depends(get_db)):
     # Solo mostramos la comida que tiene stock mayor a 0
     return db.query(models.Meal).filter(models.Meal.stock > 0).all()
 
-# 3. Buscar un platillo específico por su ID y reservarlo (restar 1 al inventario)
+# 4. Buscar un platillo específico por su ID y reservarlo (restar 1 al inventario)
 @app.put("/meals/{meal_id}/reserve")
 def reserve_meal(meal_id: int, db: Session = Depends(get_db)):
     # Buscamos el platillo en la base de datos
@@ -62,3 +62,19 @@ def reserve_meal(meal_id: int, db: Session = Depends(get_db)):
     db.refresh(db_meal)
     
     return db_meal
+
+# 5. Eliminar un platillo específico por su ID
+
+@app.delete("/meals/{meal_id}")
+def delete_meal(meal_id: int, db: Session = Depends(get_db)):
+    # Buscamos el platillo
+    db_meal = db.query(models.Meal).filter(models.Meal.id == meal_id).first()
+    
+    if db_meal is None:
+        raise HTTPException(status_code=404, detail="Platillo no encontrado")
+    
+    # Lo eliminamos de la base de datos de Render
+    db.delete(db_meal)
+    db.commit()
+    
+    return {"message": "Platillo eliminado correctamente"}
