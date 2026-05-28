@@ -43,3 +43,22 @@ def create_meal(restaurant_id: int, meal: schemas.MealCreate, db: Session = Depe
 def get_available_meals(db: Session = Depends(get_db)):
     # Solo mostramos la comida que tiene stock mayor a 0
     return db.query(models.Meal).filter(models.Meal.stock > 0).all()
+
+# 3. Buscar un platillo específico por su ID y reservarlo (restar 1 al inventario)
+@app.put("/meals/{meal_id}/reserve")
+def reserve_meal(meal_id: int, db: Session = Depends(get_db)):
+    # Buscamos el platillo en la base de datos
+    db_meal = db.query(models.Meal).filter(models.Meal.id == meal_id).first()
+    
+    if db_meal is None:
+        raise HTTPException(status_code=404, detail="Platillo no encontrado")
+    
+    if db_meal.stock <= 0:
+        raise HTTPException(status_code=400, detail="Este platillo ya está agotado")
+    
+    # Restamos 1 al inventario y guardamos el cambio
+    db_meal.stock -= 1
+    db.commit()
+    db.refresh(db_meal)
+    
+    return db_meal
