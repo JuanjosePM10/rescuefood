@@ -3,11 +3,15 @@ import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, Act
 import { ShoppingBag, Store, User, Bell, ArrowRight, Tag, Clock, PlusCircle, Settings, LogOut, Award, ChevronRight, Heart } from 'lucide-react-native';
 
 export default function App() {
-  // 1. Iniciamos la app en la pantalla de Bienvenida
+  // Estados de navegación y sesión
   const [currentScreen, setCurrentScreen] = useState('Welcome');
+  const [rolUsuario, setRolUsuario] = useState(null); // Puede ser 'cliente' o 'restaurante'
+  
+  // Estados de datos
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Tu URL pública oficial de Render
   const BASE_URL = "https://rescuefood-1eol.onrender.com"; 
   const API_URL = `${BASE_URL}/meals/`;
 
@@ -24,9 +28,24 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchMeals();
-  }, []);
+    // Solo cargamos los platillos si ya entramos a la app
+    if(currentScreen !== 'Welcome' && currentScreen !== 'Login') {
+      fetchMeals();
+    }
+  }, [currentScreen]);
 
+  // --- FUNCIONES DE SESIÓN ---
+  const iniciarSesion = (rol) => {
+    setRolUsuario(rol);
+    setCurrentScreen('Home');
+  };
+
+  const cerrarSesion = () => {
+    setRolUsuario(null);
+    setCurrentScreen('Welcome');
+  };
+
+  // --- FUNCIONES DE DATOS ---
   const publicarPlatillo = async () => {
     if (!form.title || !form.original_price || !form.discount_price) {
       Alert.alert("Campos vacíos", "Por favor llena los datos principales del platillo.");
@@ -47,7 +66,7 @@ export default function App() {
       });
 
       if (response.ok) {
-        Alert.alert("¡Éxito!", "Platillo publicado. Los clientes ya pueden verlo.");
+        Alert.alert("¡Éxito!", "Platillo publicado en rescuefood.");
         setForm({ title: '', description: '', original_price: '', discount_price: '', stock: '', pickup_time: '' });
         fetchMeals(); 
         setCurrentScreen('Home'); 
@@ -70,26 +89,22 @@ export default function App() {
     );
   };
 
-const procesarReserva = async (meal) => {
+  const procesarReserva = async (meal) => {
     try {
-      // Hacemos la petición real a tu nuevo endpoint en la nube
-      const response = await fetch(`${BASE_URL}/meals/${meal.id}/reserve`, {
-        method: 'PUT',
-      });
+      const response = await fetch(`${BASE_URL}/meals/${meal.id}/reserve`, { method: 'PUT' });
 
       if (response.ok) {
-        // Si el servidor confirma la resta, actualizamos la pantalla
         const nuevoStock = meal.stock - 1;
         setMeals(meals.map(m => m.id === meal.id ? { ...m, stock: nuevoStock } : m));
         
         const numeroTicket = Math.floor(1000 + Math.random() * 9000);
         Alert.alert(
           "¡Reserva Exitosa! 🎉", 
-          `Tu código de recolección es: #RF-${numeroTicket}\n\nMuestra este código en el restaurante hoy en el horario de ${meal.pickup_time}.`
+          `Tu código es: #RF-${numeroTicket}\n\nMuestra este código en el restaurante hoy en el horario de ${meal.pickup_time}.`
         );
       } else {
         Alert.alert("Ups", "Alguien te ganó este platillo o hubo un error.");
-        fetchMeals(); // Recarga la lista para mostrar el inventario real
+        fetchMeals(); 
       }
     } catch (error) {
       Alert.alert("Error de red", "No se pudo conectar con el servidor de rescuefood.");
@@ -99,27 +114,55 @@ const procesarReserva = async (meal) => {
   return (
     <SafeAreaView style={styles.container}>
       
-      {/* --- PANTALLA DE BIENVENIDA --- */}
+      {/* 1. PANTALLA DE BIENVENIDA */}
       {currentScreen === 'Welcome' && (
         <View style={styles.welcomeContainer}>
           <View style={styles.welcomeLogoCircle}>
             <ShoppingBag color="#FFF" size={60} />
           </View>
-          <Text style={styles.welcomeTitle}>Rescuefood <Text style={styles.mxBadgeWelcome}>MX</Text></Text>
+          <Text style={styles.welcomeTitle}>rescuefood</Text>
           <Text style={styles.welcomeSubtitle}>Rescata comida deliciosa, ahorra dinero y ayuda al planeta.</Text>
           
-          <TouchableOpacity style={styles.startButton} onPress={() => setCurrentScreen('Home')}>
-            <Text style={styles.startButtonText}>Comenzar a Explorar</Text>
+          <TouchableOpacity style={styles.startButton} onPress={() => setCurrentScreen('Login')}>
+            <Text style={styles.startButtonText}>Comenzar</Text>
             <ArrowRight color="#FFF" size={20} />
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Ocultamos la cabecera y el contenido si estamos en Welcome */}
-      {currentScreen !== 'Welcome' && (
+      {/* 2. PANTALLA DE LOGIN (NUEVA) */}
+      {currentScreen === 'Login' && (
+        <View style={styles.loginContainer}>
+          <Text style={styles.loginTitle}>¿Cómo deseas ingresar?</Text>
+          <Text style={styles.loginSubtitle}>Selecciona tu perfil para continuar</Text>
+
+          <TouchableOpacity style={styles.roleButton} onPress={() => iniciarSesion('cliente')}>
+            <View style={styles.roleIconCircle}>
+              <User color="#10B981" size={30} />
+            </View>
+            <View style={styles.roleTextContainer}>
+              <Text style={styles.roleTitle}>Soy Cliente</Text>
+              <Text style={styles.roleDescription}>Quiero explorar comida y ahorrar.</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.roleButton} onPress={() => iniciarSesion('restaurante')}>
+            <View style={styles.roleIconCircle}>
+              <Store color="#F97316" size={30} />
+            </View>
+            <View style={styles.roleTextContainer}>
+              <Text style={styles.roleTitle}>Soy Restaurante</Text>
+              <Text style={styles.roleDescription}>Quiero publicar comida sobrante.</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* 3. INTERFAZ PRINCIPAL DE LA APP */}
+      {currentScreen !== 'Welcome' && currentScreen !== 'Login' && (
         <>
           <View style={styles.header}>
-            <Text style={styles.brandText}>Rescuefood <Text style={styles.mxBadge}>MX</Text></Text>
+            <Text style={styles.brandText}>rescuefood</Text>
             <TouchableOpacity style={styles.iconButton}>
               <Bell color="#10B981" size={24} />
             </TouchableOpacity>
@@ -130,10 +173,10 @@ const procesarReserva = async (meal) => {
             {currentScreen === 'Home' && (
               <View>
                 <View style={styles.banner}>
-                  <Text style={styles.bannerTitle}>¡Hoy rescatamos 45kg de comida!</Text>
+                  <Text style={styles.bannerTitle}>¡Hola! Listo para rescatar comida?</Text>
                   <Text style={styles.bannerSub}>Revisa los platillos disponibles cerca de ti.</Text>
                 </View>
-                <Text style={styles.sectionTitle}>Platillos del Día con Descuento</Text>
+                <Text style={styles.sectionTitle}>Platillos del Día</Text>
                 {loading ? (
                   <ActivityIndicator size="large" color="#10B981" style={{ marginTop: 20 }} />
                 ) : meals.length === 0 ? (
@@ -162,10 +205,12 @@ const procesarReserva = async (meal) => {
                           <Text style={styles.originalPrice}>${meal.original_price}</Text>
                           <Text style={styles.discountPrice}>${meal.discount_price} MXN</Text>
                         </View>
+                        
+                        {/* El cliente puede reservar, el restaurante no debería (lógica de negocio) */}
                         <TouchableOpacity 
                           style={[styles.orderButton, meal.stock <= 0 && {backgroundColor: '#9CA3AF'}]} 
                           onPress={() => reservarPlatillo(meal)}
-                          disabled={meal.stock <= 0}
+                          disabled={meal.stock <= 0 || rolUsuario === 'restaurante'}
                         >
                           <Text style={styles.orderButtonText}>{meal.stock > 0 ? 'Reservar' : 'Agotado'}</Text>
                           {meal.stock > 0 && <ArrowRight color="#FFF" size={16} />}
@@ -177,13 +222,13 @@ const procesarReserva = async (meal) => {
               </View>
             )}
 
-            {/* PANTALLA MI NEGOCIO */}
-            {currentScreen === 'Restaurante' && (
+            {/* PANTALLA MI NEGOCIO (SOLO RESTAURANTES) */}
+            {currentScreen === 'Restaurante' && rolUsuario === 'restaurante' && (
               <View>
                 <Text style={styles.sectionTitle}>Publicar Comida Sobrante</Text>
                 <View style={styles.formCard}>
                   <Text style={styles.label}>¿Qué vas a rescatar hoy?</Text>
-                  <TextInput style={styles.input} placeholder="Ej. 1 Kilo de Carnitas surtidas" value={form.title} onChangeText={(text) => setForm({...form, title: text})} />
+                  <TextInput style={styles.input} placeholder="Ej. 1 Kilo de Carnitas" value={form.title} onChangeText={(text) => setForm({...form, title: text})} />
                   <Text style={styles.label}>Descripción breve</Text>
                   <TextInput style={[styles.input, {height: 80}]} multiline placeholder="Ej. Incluye tortillas y salsa." value={form.description} onChangeText={(text) => setForm({...form, description: text})} />
                   <View style={styles.row}>
@@ -221,52 +266,15 @@ const procesarReserva = async (meal) => {
                   <View style={styles.avatarCircle}>
                     <User color="#FFF" size={40} />
                   </View>
-                  <Text style={styles.profileName}>Juan José</Text>
-                  <Text style={styles.profileBio}>El inge</Text>
-                  <View style={styles.levelBadge}>
-                    <Award color="#F59E0B" size={16} />
-                    <Text style={styles.levelText}>Nivel 3: Héroe Local</Text>
-                  </View>
+                  <Text style={styles.profileName}>
+                    {rolUsuario === 'restaurante' ? 'Taquería El Fogón' : 'Juan José'}
+                  </Text>
+                  <Text style={styles.profileBio}>
+                    {rolUsuario === 'restaurante' ? 'Cuenta de Negocio' : 'Ingeniero & Rescatista'}
+                  </Text>
                 </View>
-                <Text style={styles.sectionTitle}>Tu Impacto Ecológico</Text>
-                <View style={styles.statsRowProfile}>
-                  <View style={styles.statBox}>
-                    <Text style={styles.statNumber}>12</Text>
-                    <Text style={styles.statLabel}>Platillos Salvados</Text>
-                  </View>
-                  <View style={styles.statBox}>
-                    <Text style={styles.statNumber}>$850</Text>
-                    <Text style={styles.statLabel}>Pesos Ahorrados</Text>
-                  </View>
-                  <View style={styles.statBox}>
-                    <Text style={styles.statNumber}>5 kg</Text>
-                    <Text style={styles.statLabel}>CO2 Evitado</Text>
-                  </View>
-                </View>
-                <View style={styles.menuCard}>
-                  <TouchableOpacity style={styles.menuItem}>
-                    <View style={styles.menuItemLeft}>
-                      <User color="#4B5563" size={20} />
-                      <Text style={styles.menuText}>Mis Datos Personales</Text>
-                    </View>
-                    <ChevronRight color="#9CA3AF" size={20} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.menuItem}>
-                    <View style={styles.menuItemLeft}>
-                      <Heart color="#4B5563" size={20} />
-                      <Text style={styles.menuText}>Restaurantes Favoritos</Text>
-                    </View>
-                    <ChevronRight color="#9CA3AF" size={20} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.menuItem}>
-                    <View style={styles.menuItemLeft}>
-                      <Settings color="#4B5563" size={20} />
-                      <Text style={styles.menuText}>Configuración de la App</Text>
-                    </View>
-                    <ChevronRight color="#9CA3AF" size={20} />
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity style={styles.logoutButton}>
+                
+                <TouchableOpacity style={styles.logoutButton} onPress={cerrarSesion}>
                   <LogOut color="#EF4444" size={20} />
                   <Text style={styles.logoutText}>Cerrar Sesión</Text>
                 </TouchableOpacity>
@@ -274,16 +282,21 @@ const procesarReserva = async (meal) => {
             )}
           </ScrollView>
 
-          {/* BARRA DE NAVEGACIÓN INFERIOR */}
+          {/* BARRA DE NAVEGACIÓN INFERIOR (CON CONTROL DE ACCESOS) */}
           <View style={styles.bottomNav}>
             <TouchableOpacity style={styles.navItem} onPress={() => setCurrentScreen('Home')}>
               <ShoppingBag color={currentScreen === 'Home' ? '#10B981' : '#9CA3AF'} size={24} />
               <Text style={[styles.navText, currentScreen === 'Home' && styles.navTextActive]}>Explorar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.navItem} onPress={() => setCurrentScreen('Restaurante')}>
-              <Store color={currentScreen === 'Restaurante' ? '#10B981' : '#9CA3AF'} size={24} />
-              <Text style={[styles.navText, currentScreen === 'Restaurante' && styles.navTextActive]}>Mi Negocio</Text>
-            </TouchableOpacity>
+            
+            {/* ESTE BOTÓN SOLO APARECE SI EL ROL ES RESTAURANTE */}
+            {rolUsuario === 'restaurante' && (
+              <TouchableOpacity style={styles.navItem} onPress={() => setCurrentScreen('Restaurante')}>
+                <Store color={currentScreen === 'Restaurante' ? '#10B981' : '#9CA3AF'} size={24} />
+                <Text style={[styles.navText, currentScreen === 'Restaurante' && styles.navTextActive]}>Mi Negocio</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity style={styles.navItem} onPress={() => setCurrentScreen('Perfil')}>
               <User color={currentScreen === 'Perfil' ? '#10B981' : '#9CA3AF'} size={24} />
               <Text style={[styles.navText, currentScreen === 'Perfil' && styles.navTextActive]}>Perfil</Text>
@@ -299,7 +312,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   header: { height: 60, backgroundColor: '#FFF', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingTop: 10 },
   brandText: { fontSize: 22, fontWeight: 'bold', color: '#10B981' },
-  mxBadge: { fontSize: 12, backgroundColor: '#F97316', color: '#FFF', paddingHorizontal: 4, borderRadius: 4, overflow: 'hidden' },
   iconButton: { padding: 8 },
   content: { flex: 1, padding: 15 },
   banner: { backgroundColor: '#10B981', padding: 15, borderRadius: 16, marginBottom: 20 },
@@ -335,30 +347,30 @@ const styles = StyleSheet.create({
   col: { width: '48%' },
   publishButton: { backgroundColor: '#F97316', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 14, borderRadius: 12, marginTop: 25 },
   publishButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 16, marginLeft: 8 },
+  
+  // ESTILOS DEL PERFIL Y LOGIN
   profileContainer: { paddingBottom: 20 },
   profileHeader: { alignItems: 'center', marginBottom: 25, marginTop: 10 },
-  avatarCircle: { width: 90, height: 90, backgroundColor: '#10B981', borderRadius: 45, justifyContent: 'center', alignItems: 'center', marginBottom: 12, shadowColor: '#10B981', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
+  avatarCircle: { width: 90, height: 90, backgroundColor: '#10B981', borderRadius: 45, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
   profileName: { fontSize: 24, fontWeight: 'bold', color: '#1F2937' },
   profileBio: { fontSize: 14, color: '#6B7280', marginTop: 4, marginBottom: 10 },
-  levelBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF3C7', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  levelText: { color: '#D97706', fontWeight: 'bold', fontSize: 13, marginLeft: 6 },
-  statsRowProfile: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 },
-  statBox: { backgroundColor: '#FFF', width: '31%', paddingVertical: 15, borderRadius: 12, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  statNumber: { fontSize: 20, fontWeight: 'bold', color: '#10B981', marginBottom: 4 },
-  statLabel: { fontSize: 11, color: '#6B7280', textAlign: 'center' },
-  menuCard: { backgroundColor: '#FFF', borderRadius: 16, paddingVertical: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3, marginBottom: 20 },
-  menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  menuItemLeft: { flexDirection: 'row', alignItems: 'center' },
-  menuText: { fontSize: 16, color: '#4B5563', marginLeft: 15, fontWeight: '500' },
-  logoutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 15, backgroundColor: '#FEF2F2', borderRadius: 12 },
+  logoutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 15, backgroundColor: '#FEF2F2', borderRadius: 12, marginTop: 20 },
   logoutText: { color: '#EF4444', fontWeight: 'bold', fontSize: 16, marginLeft: 10 },
   
-  // ESTILOS DE LA PANTALLA DE BIENVENIDA
   welcomeContainer: { flex: 1, backgroundColor: '#10B981', justifyContent: 'center', alignItems: 'center', padding: 20 },
   welcomeLogoCircle: { width: 120, height: 120, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 60, justifyContent: 'center', alignItems: 'center', marginBottom: 30 },
   welcomeTitle: { fontSize: 40, fontWeight: 'bold', color: '#FFF', marginBottom: 15 },
-  mxBadgeWelcome: { fontSize: 20, backgroundColor: '#F97316', paddingHorizontal: 8, borderRadius: 6, overflow: 'hidden' },
   welcomeSubtitle: { fontSize: 18, color: '#E0F2FE', textAlign: 'center', marginBottom: 50, paddingHorizontal: 20, lineHeight: 26 },
-  startButton: { backgroundColor: '#F97316', flexDirection: 'row', alignItems: 'center', paddingVertical: 18, paddingHorizontal: 30, borderRadius: 30, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 },
-  startButtonText: { color: '#FFF', fontSize: 18, fontWeight: 'bold', marginRight: 10 }
+  startButton: { backgroundColor: '#F97316', flexDirection: 'row', alignItems: 'center', paddingVertical: 18, paddingHorizontal: 30, borderRadius: 30 },
+  startButtonText: { color: '#FFF', fontSize: 18, fontWeight: 'bold', marginRight: 10 },
+
+  // ESTILOS NUEVOS DE LA PANTALLA DE LOGIN
+  loginContainer: { flex: 1, backgroundColor: '#FFF', padding: 25, justifyContent: 'center' },
+  loginTitle: { fontSize: 28, fontWeight: 'bold', color: '#1F2937', marginBottom: 8, textAlign: 'center' },
+  loginSubtitle: { fontSize: 16, color: '#6B7280', marginBottom: 40, textAlign: 'center' },
+  roleButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', padding: 20, borderRadius: 16, marginBottom: 20, borderWidth: 1, borderColor: '#E5E7EB' },
+  roleIconCircle: { width: 60, height: 60, backgroundColor: '#FFF', borderRadius: 30, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2, marginRight: 15 },
+  roleTextContainer: { flex: 1 },
+  roleTitle: { fontSize: 18, fontWeight: 'bold', color: '#1F2937', marginBottom: 4 },
+  roleDescription: { fontSize: 14, color: '#6B7280' }
 });
