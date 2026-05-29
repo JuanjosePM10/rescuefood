@@ -20,8 +20,8 @@ export default function App() {
   // --- ESTADOS PARA LAS TABLAS DE ADMIN (ROOT) ---
   const [adminData, setAdminData] = useState({ users: [], restaurants: [] });
 
-  // ⚠️ RECUERDA PONER TU IP DE CASA AQUÍ:
-  const BASE_URL = "https://rescuefood-1eol.onrender.com"; 
+ 
+  const BASE_URL = "http://192.168.1.11:8000"; 
   const API_URL = `${BASE_URL}/meals/`;
 
   const [form, setForm] = useState({
