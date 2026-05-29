@@ -21,7 +21,7 @@ export default function App() {
   const [adminData, setAdminData] = useState({ users: [], restaurants: [] });
 
  
-  const BASE_URL = "http://192.168.1.11:8000"; 
+  const BASE_URL = "https://rescuefood-1eol.onrender.com"; 
   const API_URL = `${BASE_URL}/meals/`;
 
   const [form, setForm] = useState({
