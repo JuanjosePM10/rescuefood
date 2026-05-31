@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "freshsave-app",
-    "slug": "freshsave-app",
+    "name": "RescueFood",
+    "slug": "rescuefood",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -20,10 +20,16 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.bananasj.rescuefood"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "1ef3f165-06ad-4dce-86ef-11fd4c8c92e8"
+      }
     }
   }
 }
