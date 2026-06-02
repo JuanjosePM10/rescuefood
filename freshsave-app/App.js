@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, TextInput, Alert } from 'react-native';
 import { ShoppingBag, Store, User, ArrowRight, Tag, Clock, PlusCircle, LogOut, Trash2, Star, DollarSign, Calendar, ShoppingCart, Receipt } from 'lucide-react-native';
 
-// VARIABLE GLOBAL PARA EL HISTORIAL DE COMPRAS DEL PANEL ADMIN
+
 let globalTransactions = [];
 
 export default function App() {
@@ -25,15 +25,15 @@ export default function App() {
   
   const [adminData, setAdminData] = useState({ users: [], restaurants: [] });
 
-  // ⚠️ CONFIGURACIÓN DE TU BACKEND LOCAL
-  const BASE_URL = "http://192.168.1.59:8000"; 
+  //  CONFIGURACIÓN LOCAL
+  const BASE_URL = "http://192.168.1.59:8000"; //cambiar según IP local y puerto del backend
   const API_URL = `${BASE_URL}/meals/`;
 
   const [form, setForm] = useState({ title: '', description: '', stock: '1' });
   const [sizes, setSizes] = useState([{ name: 'General', original: '', discount: '' }]);
 
   // ==========================================
-  // 🛡️ MOTOR DE EXTRACCIÓN DE IDs SEGURO
+  //  MOTOR DE EXTRACCIÓN DE IDs SEGURO
   // ==========================================
   const extraerIdSeguro = (obj) => {
     if (!obj) return null;
@@ -45,9 +45,7 @@ export default function App() {
     return null;
   };
 
-  // ==========================================
-  // 📈 NUEVA FUNCIÓN: CÁLCULO DE DESCUENTO DINÁMICO
-  // ==========================================
+
   const calcularPorcentajeDescuento = (original, oferta) => {
     const orig = parseFloat(original);
     const ofer = parseFloat(oferta);
@@ -61,9 +59,7 @@ export default function App() {
     return Math.round(porcentaje);
   };
 
-  // ==========================================
-  // 1. CARGA CRUZADA DE PLATILLOS Y USUARIOS
-  // ==========================================
+
   const fetchMealsData = async () => {
     setLoading(true);
     try {
@@ -87,7 +83,7 @@ export default function App() {
           });
         }
       } catch (e) { 
-        console.log("Aviso: No se pudo conectar al dashboard admin"); 
+        console.log("Aviso: No se pudo conectar a la interface admin"); 
       }
 
       const mealsRes = await fetch(API_URL);
@@ -117,9 +113,7 @@ export default function App() {
     }
   }, [currentScreen]);
 
-  // ==========================================
-  // 2. VALIDACIÓN ESTRICTA DE LOGIN
-  // ==========================================
+  // validacvion de credenciales y gestión de sesión
   const procesarAuth = async () => {
     if (!authData.email || !authData.password) {
       return Alert.alert("Campos vacíos", "El correo y la contraseña son obligatorios.");
@@ -168,7 +162,7 @@ export default function App() {
         if (authMode === 'login' && authData.email !== "admin@gmail.com") {
           if (finalRole && finalRole !== authData.role) {
             return Alert.alert(
-              "Perfil Incorrecto 🛑", 
+              "Perfil Incorrecto", 
               `Estás intentando entrar como ${authData.role.toUpperCase()},\npero tus credenciales pertenecen a la cuenta de un ${finalRole.toUpperCase()}.`
             );
           }
@@ -202,9 +196,7 @@ export default function App() {
     setCurrentScreen('Welcome');
   };
 
-  // ==========================================
-  // 3. GESTIÓN DE PLATILLOS (RESTAURANTE)
-  // ==========================================
+  //gestion de restaurante y publicación de platillos
   const addSize = () => setSizes([...sizes, { name: '', original: '', discount: '' }]);
   const updateSize = (index, field, value) => {
     const newSizes = [...sizes];
@@ -258,9 +250,7 @@ export default function App() {
     }
   };
 
-  // ==========================================
-  // 4. LÓGICA DE CARRITO Y PAGOS MULTI-LOCAL
-  // ==========================================
+  // carrito de compras 
   const agregarAlCarrito = (meal) => {
     const enCarrito = pendingCart.filter(item => item.id === meal.id).length;
     if (enCarrito >= meal.stock) {
@@ -336,7 +326,7 @@ export default function App() {
       setPurchasedTickets(prev => [...prev, ...nuevosTickets]);
       setPendingCart([]); 
       fetchMealsData(); 
-      Alert.alert("¡Compra Exitosa! 🎉", `Tickets listos. Compruébalos en tu Perfil.`);
+      Alert.alert("¡Compra Exitosa!", `Tickets listos. Compruébalos en tu Perfil.`);
       setCurrentScreen('Perfil');
     } catch (error) { 
       Alert.alert("Error", "No se pudo completar el proceso."); 
@@ -433,7 +423,7 @@ export default function App() {
                     const enCarrito = pendingCart.filter(item => item.id === meal.id).length;
                     const stockDisponible = meal.stock - enCarrito;
                     
-                    // 🚨 APLICACIÓN DE LA NUEVA FUNCIÓN EN LA PUBLICACIÓN DEL PÚBLICO
+                    // APLICACIÓN DE LA NUEVA FUNCIÓN EN LA PUBLICACIÓN DEL PÚBLICO
                     const pctDesc = calcularPorcentajeDescuento(meal.original_price, meal.discount_price);
 
                     return (
@@ -534,7 +524,7 @@ export default function App() {
               }
               return (
                 <View>
-                  <Text style={styles.sectionTitle}>Subir Comida / Variantes</Text>
+                  <Text style={styles.sectionTitle}>Subir Comida</Text>
                   <View style={styles.formCard}>
                     <Text style={styles.label}>Producto</Text><TextInput style={styles.input} value={form.title} onChangeText={(t) => setForm({...form, title: t})} />
                     <Text style={styles.label}>Descripción</Text><TextInput style={styles.input} value={form.description} onChangeText={(t) => setForm({...form, description: t})} />
@@ -712,9 +702,7 @@ export default function App() {
   );
 }
 
-// ==========================================
-// HOJA DE ESTILOS COMPLETA
-// ==========================================
+// paleta de colores y estilos generales para toda la app
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   header: { height: 60, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingTop: 10 },

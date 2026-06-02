@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware # IMPORTACIÓN NUEVA PARA LA NUBE
 from database import engine, Base, SessionLocal
 from sqlalchemy.orm import Session
 from sqlalchemy import Column, Integer, String
@@ -8,13 +9,24 @@ import schemas
 
 app = FastAPI(title="API Rescate de Comida - México")
 
+# =====================================================================
+# CONFIGURACIÓN CORS (VITAL PARA CONECTAR DESDE CUALQUIER RED 4G/WIFI)
+# =====================================================================
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # El "*" permite que cualquier app o red se conecte
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.on_event("startup")
 def startup_event():
     Base.metadata.create_all(bind=engine)
     models.Base.metadata.create_all(bind=engine)
 
 # =====================================================================
-# 1. DEFINICIÓN DE MODELOS LOCALES (Debe ir antes de create_all)
+# 1. DEFINICIÓN DE MODELOS LOCALES
 # =====================================================================
 class User(Base):
     __tablename__ = "users"
@@ -24,10 +36,10 @@ class User(Base):
     name = Column(String, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
-    role = Column(String)  # 'cliente' o 'restaurante'
+    role = Column(String)
 
 # =====================================================================
-# 2. CREACIÓN DE TABLAS EN LA BASE DE DATOS
+# 2. CREACIÓN DE TABLAS
 # =====================================================================
 Base.metadata.create_all(bind=engine)
 models.Base.metadata.create_all(bind=engine)
@@ -43,7 +55,6 @@ def get_password_hash(password):
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
-# DEPENDENCIA PARA LA CONEXIÓN A LA BD
 def get_db():
     db = SessionLocal()
     try:
@@ -56,9 +67,8 @@ def get_db():
 # =====================================================================
 @app.get("/")
 def read_root():
-    return {"status": "¡Éxito!", "message": "El backend para México está vivo."}
+    return {"status": "¡Éxito!", "message": "El backend para México está vivo y en la nube."}
 
-# Ruta para registrar un restaurante
 @app.post("/restaurants/")
 def create_restaurant(restaurant: schemas.RestaurantCreate, db: Session = Depends(get_db)):
     db_restaurant = models.Restaurant(**restaurant.model_dump(), user_id=1) 
@@ -67,7 +77,6 @@ def create_restaurant(restaurant: schemas.RestaurantCreate, db: Session = Depend
     db.refresh(db_restaurant)
     return db_restaurant
 
-# Ruta para publicar un platillo
 @app.post("/restaurants/{restaurant_id}/meals/")
 def create_meal(restaurant_id: int, meal: schemas.MealCreate, db: Session = Depends(get_db)):
     db_meal = models.Meal(**meal.model_dump(), restaurant_id=restaurant_id)
@@ -76,12 +85,10 @@ def create_meal(restaurant_id: int, meal: schemas.MealCreate, db: Session = Depe
     db.refresh(db_meal)
     return db_meal
 
-# Ruta para ver comida disponible
 @app.get("/meals/")
 def get_available_meals(db: Session = Depends(get_db)):
     return db.query(models.Meal).filter(models.Meal.stock > 0).all()
 
-# Reservar platillo
 @app.put("/meals/{meal_id}/reserve")
 def reserve_meal(meal_id: int, db: Session = Depends(get_db)):
     db_meal = db.query(models.Meal).filter(models.Meal.id == meal_id).first()
@@ -96,7 +103,6 @@ def reserve_meal(meal_id: int, db: Session = Depends(get_db)):
     db.refresh(db_meal)
     return db_meal
 
-# Eliminar platillo
 @app.delete("/meals/{meal_id}")
 def delete_meal(meal_id: int, db: Session = Depends(get_db)):
     db_meal = db.query(models.Meal).filter(models.Meal.id == meal_id).first()   
@@ -109,23 +115,22 @@ def delete_meal(meal_id: int, db: Session = Depends(get_db)):
     return {"message": "Platillo eliminado correctamente"}
 
 # =====================================================================
-# 5. RUTAS DE AUTENTICACIÓN REAL
+# 5. RUTAS DE AUTENTICACIÓN REAL (CORREGIDAS PARA DEVOLVER EL ID)
 # =====================================================================
 @app.post("/register")
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    # Buscamos si el correo ya existe en la tabla recién creada
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Este correo ya está registrado.")
     
-    # Encriptamos y guardamos
     hashed_pwd = get_password_hash(user.password)
     new_user = User(name=user.name, email=user.email, hashed_password=hashed_pwd, role=user.role)
     
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    return {"message": "¡Cuenta creada con éxito!", "name": new_user.name, "role": new_user.role}
+    # AHORA DEVUELVE EL ID CORRECTAMENTE
+    return {"id": new_user.id, "message": "¡Cuenta creada con éxito!", "name": new_user.name, "role": new_user.role}
 
 @app.post("/login")
 def login_user(user: schemas.UserLogin, db: Session = Depends(get_db)):
@@ -136,17 +141,16 @@ def login_user(user: schemas.UserLogin, db: Session = Depends(get_db)):
     if not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(status_code=400, detail="Contraseña incorrecta.")
     
-    return {"message": "¡Bienvenido de vuelta!", "name": db_user.name, "role": db_user.role}
+    # AHORA DEVUELVE EL ID CORRECTAMENTE
+    return {"id": db_user.id, "message": "¡Bienvenido de vuelta!", "name": db_user.name, "role": db_user.role}
 
-
-# Ruta para el tablero de administrador
 @app.get("/admin/dashboard")
 def get_admin_dashboard(db: Session = Depends(get_db)):
     users = db.query(User).all()
-    # Asumiendo que tienes un modelo Restaurant, si no, lo ajustamos
     restaurants = db.query(models.Restaurant).all() 
     
     return {
-        "users": [{"name": u.name, "email": u.email, "role": u.role} for u in users],
+        # AHORA INCLUYE EL ID EN LA LISTA DE USUARIOS
+        "users": [{"id": u.id, "name": u.name, "email": u.email, "role": u.role} for u in users],
         "restaurants": [{"id": r.id, "name": r.name} for r in restaurants]
     }
