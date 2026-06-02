@@ -26,7 +26,7 @@ export default function App() {
   const [adminData, setAdminData] = useState({ users: [], restaurants: [] });
 
   //  CONFIGURACIÓN LOCAL
-  const BASE_URL = "http://192.168.1.59:8000"; //cambiar según IP local y puerto del backend
+  const BASE_URL = "https://rescuefood-1eol.onrender.com"; //cambiar según IP local y puerto del backend
   const API_URL = `${BASE_URL}/meals/`;
 
   const [form, setForm] = useState({ title: '', description: '', stock: '1' });
